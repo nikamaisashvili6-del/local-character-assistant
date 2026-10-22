@@ -1,0 +1,2 @@
+screen and system settings
+lock, theme, dark, light, mode, notifications, disturb, dnd

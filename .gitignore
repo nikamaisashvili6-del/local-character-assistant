@@ -1,0 +1,6 @@
+# personal: your settings, chats and the character's journal about you
+config.toml
+logs/
+journal/
+__pycache__/
+*.pyc

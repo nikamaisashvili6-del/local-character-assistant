@@ -1,0 +1,2 @@
+disk, RAM, GPU, CPU usage
+disk, ram, memory, gpu, cpu, storage, space, resources

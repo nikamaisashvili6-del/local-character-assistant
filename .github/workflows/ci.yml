@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, test, leak scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install check tools
+        run: pip install pytest==8.3.4 ruff==0.8.4
+      - name: Lint (syntax errors, undefined names)
+        run: ruff check --select E9,F63,F7,F82 .
+      - name: Unit tests (no Ollama needed)
+        run: pytest -q tests
+      - name: Shell tool syntax
+        run: for f in $(find tools -name '*.sh'); do bash -n "$f" || exit 1; done
+      - name: Leak scan (home paths, private IPs, e-mails, tokens, personal words)
+        env:
+          LEAK_WORDS: ${{ secrets.LEAK_WORDS }}
+        run: python3 .github/leakscan.py .

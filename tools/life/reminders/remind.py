@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # desc: set a reminder or alarm: "in 10 minutes to X", "at 9", "at 21:30 to X"
-# keywords: remind, reminder, alarm, set, timer, wake, in, at
+# keywords: remind, reminder, set, timer, wake, in, at
 # confirm: no
 # args: yes
 #

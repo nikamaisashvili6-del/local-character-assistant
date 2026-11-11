@@ -103,4 +103,38 @@ def write_journal(history, summary, ask):
     today = JOURNAL_DIR / f"{datetime.now():%Y-%m-%d}.md"
     with today.open("a") as f:                          # several sessions a day = appended
         f.write(f"**{datetime.now():%H:%M}**\n{bullets}\n\n")
-    return today
+    return today, bullets
+
+
+# --- 4. Self (who it has become) ----------------------------------------------
+# The journal is a diary; self.md is the condensed "who I am now". After each
+# session the model rewrites it from the old version + today's journal, under a
+# hard size cap, so it stays small and gets sharper instead of longer. Plain
+# markdown: edit or delete lines anytime and it builds on your version.
+
+def load_self():
+    f = config.SELF_FILE
+    return f.read_text().strip() if f and f.exists() else ""
+
+
+def update_self(journal_entry, ask):
+    """Rewrite self.md with what this session taught it. Returns the path or None."""
+    f = config.SELF_FILE
+    if not f or not journal_entry:
+        return None
+    old = load_self()
+    prompt = (f"You are {config.character_name()}, {config.USER_NAME}'s assistant. Below is "
+              "what you currently believe about yourself and about working with them, and your "
+              "newest journal entry. Rewrite the file: keep what still holds, add what the "
+              "journal shows (how they like answers, what they rely on you for, habits that "
+              "worked or annoyed them), drop what's outdated. Only facts from the text below, "
+              f"nothing invented. Short bullets under 2-3 headings, at most "
+              f"{config.SELF_MAX_CHARS} characters. Output the file only.\n\n"
+              f"Current file:\n{old or '(empty, first time)'}\n\nNewest journal entry:\n{journal_entry}")
+    text = ask([{"role": "user", "content": prompt}]).strip()
+    text = re.sub(r"^```(?:markdown|md)?\n(.*)\n```$", r"\1", text, flags=re.S)
+    if not text:
+        return None
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(text[:config.SELF_MAX_CHARS * 2] + "\n")   # hard stop if it ignores the cap
+    return f

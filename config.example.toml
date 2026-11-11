@@ -3,9 +3,11 @@
 
 [assistant]
 model = "mistral-nemo"        # the "mouth": any Ollama model (12B fits an 8 GB GPU with some CPU spill)
-watcher_model = "llama3.2:3b" # the small router model; runs on CPU, only used to break ties
+watcher_model = "llama3.2:3b" # small router model, only breaks ties (runs on CPU). "" = use the main model
 context_tokens = 8192         # model working memory; bigger = more VRAM
+temperature = 0.6             # lower = fewer invented facts, higher = livelier
 place = ""                    # optional, e.g. "Berlin": added to the time note
+raw_prompt = "auto"           # "auto" | "on" | "off": hand-built Mistral prompt for caching (see README)
 
 [user]
 name = "Alex"                 # what the character calls you
@@ -18,6 +20,15 @@ dir = "character"             # folder with persona.txt + lore.md
 [memory]
 journal_dir = "journal"       # where the character writes its journal (e.g. inside an Obsidian vault)
 journal_days = 3              # how many past days it rereads on startup
+self_file = ""                # e.g. "self.md": who it has become, condensed from the journal ("" = off)
+self_max_chars = 1500         # cap, so self.md gets rewritten shorter instead of growing
 
 [tools]
 notes_dir = "~/Documents"     # where the notes-search tool looks for .md files
+extra_dirs = []               # more tool folders with the same layout, e.g. ["~/my-private-tools"]
+output = "character"          # "character" = it answers about the result | "raw" = print the output as is, no model
+
+[skills]
+dir = "skills"                # notes it writes itself; drafts wait in skills/pending/ for review
+auto_draft = false            # on /quit, draft a skill if something in the chat worked
+reviewer = "claude -p --tools '' --no-session-persistence"   # who checks drafts (review_skills.py)

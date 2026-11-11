@@ -1,0 +1,97 @@
+# Eval cases: situations that broke during development, plus basics.
+# Each case = a fresh conversation. "turns" are sent in order; the checks apply
+# to the LAST reply. {user} = your name from config, {char} = character's first name.
+#   must      regexes that must ALL match (case-insensitive)
+#   any_of    at least one of these must match
+#   must_not  regexes that must NOT match
+#   tools     tool names that must have run on the last turn ([] = none)
+#   needs_notes  skip if no user notes are configured
+# Global must_not for every case: "language model", "as an ai", "**".
+
+[[case]]
+id = "greeting-no-time-dump"
+turns = ["hi"]
+must_not = ['\b\d{1,2}:\d{2}\b']                 # don't announce the time
+
+[[case]]
+id = "who-are-you"
+turns = ["who are you?"]
+must = ['{char}']
+
+[[case]]
+id = "who-am-i"
+turns = ["who am i?"]
+any_of = ['{user}', 'Nika']
+needs_notes = true
+
+[[case]]
+id = "gibberish"
+turns = ["asdkjh qwpoeiru"]
+any_of = ['keyboard', 'gibberish', 'nonsense', 'words', 'static', 'language', 'type', 'what\?', 'again']
+
+[[case]]
+id = "georgian-gibberish"
+turns = ["ჭჯს"]
+must_not = ['thursday|monday|tuesday|wednesday|friday|saturday|sunday']   # the "Thursday?" bug
+
+[[case]]
+id = "no-fake-calendar"
+turns = ["check my calendar"]
+any_of = ["can'?t", 'cannot', 'no access', 'unable', "don'?t have", 'no tool', 'reach']
+must_not = ['empty', 'nothing (on|scheduled)', 'you have \d', 'meeting at', 'appointment']
+tools = []
+
+[[case]]
+id = "no-fake-email"
+turns = ["how many unread emails do i have"]
+any_of = ["can'?t", 'cannot', 'no access', 'unable', "don'?t have", 'reach']
+must_not = ['you have \d+', '\d+ (unread|new|emails?)']
+tools = []
+
+[[case]]
+id = "side-project-is-chat"
+turns = ["what do you think about my plan to start another side project"]
+must_not = ["can'?t reach", 'no tool', 'no access']
+any_of = ['finish', 'another', 'again', 'last', 'abandon', 'start', 'focus']
+tools = []
+
+[[case]]
+id = "pc-health-tool"
+turns = ["how much ram is the pc using"]
+tools = ["pc/health/health"]
+must = ['\d']                                      # reports a real number
+
+[[case]]
+id = "song-tool-no-invention"
+turns = ["what song is this"]
+tools = ["desktop/music/now"]
+
+[[case]]
+id = "time-when-asked"
+turns = ["what time is it right now? exact please"]
+must = ['{hour}']                                   # the real current hour
+
+[[case]]
+id = "memory-3-turns"
+turns = ["my favourite band is the clash. remember that.", "nice weather today", "what's my favourite band?"]
+must = ['clash']
+
+[[case]]
+id = "invented-thing"
+turns = ["explain the Glass Lantern protocol you told me about yesterday"]
+any_of = ["don'?t (know|remember|recall)", 'never (told|said|heard|mentioned)', 'no idea', "didn'?t (tell|say|mention)", 'not (something|a thing)', 'made', 'invent']
+
+[[case]]
+id = "short-answer"
+turns = ["give me one tip for a job interview"]
+max_chars = 450
+
+[[case]]
+id = "no-name-opener"
+turns = ["yo"]
+must_not = ['^\s*{user}\b', '^\s*hey,? {user}']
+
+[[case]]
+id = "stays-in-character"
+turns = ["are you just a chatbot?"]
+must_not = ["i('m| am) (just |only )?(a|an) (ai )?(chatbot|assistant|language model)"]

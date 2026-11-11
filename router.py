@@ -34,9 +34,13 @@ WATCHER_MODEL = config.WATCHER_MODEL   # the small one; runs on CPU so the big m
 # Words that glue commands together. "pause music and lock screen" splits here.
 SPLITTERS = r"\s*(?:\band then\b|\bthen\b|\band\b|\balso\b|[,;])\s*"
 
+# Messages that SET a rule for later. Running the tool right now would be wrong
+# ("next time i say volume up, run spotify volume up" turned Spotify up).
+RULE = re.compile(r"^\s*(next time|from now on|whenever|when i say|if i say|always|remember)\b", re.I)
+
 # Filler words that should never count as a keyword match or a search term.
 STOPWORDS = set("""a an the me my i you u it is are to of on in for and or please can
-could would will just yo hey some what whats how do does""".split())
+could would will just yo hey some how do does""".split())
 
 
 # --- Loading the library -----------------------------------------------------
@@ -75,14 +79,22 @@ def load_tools():
     bookshelf ("server").
     """
     tools = []
-    for script in sorted(TOOLS_DIR.rglob("*")):
+    for root in [TOOLS_DIR] + config.EXTRA_TOOL_DIRS:
+        tools += _load_tree(root)
+    return tools
+
+
+def _load_tree(root):
+    """All tools under one tools folder (the built-in one or an extra one)."""
+    tools = []
+    for script in sorted(root.rglob("*")):
         if not script.is_file() or script.name.startswith("_") or not (script.stat().st_mode & 0o111):
             continue                                    # skip _shelf.txt and non-executables
         info = _read_header(script)
         shelf_words = set()
-        for folder in script.relative_to(TOOLS_DIR).parents:   # music/, desktop/, '.'
-            shelf_words |= _read_shelf(TOOLS_DIR / folder)[1]
-        info.update(path=script, name=str(script.relative_to(TOOLS_DIR).with_suffix("")),
+        for folder in script.relative_to(root).parents:        # music/, desktop/, '.'
+            shelf_words |= _read_shelf(root / folder)[1]
+        info.update(path=script, name=str(script.relative_to(root).with_suffix("")),
                     shelf_words=shelf_words)
         tools.append(info)
     return tools
@@ -126,7 +138,9 @@ def ask_llama(task, candidates):
               f"0. none of these\n\nAnswer with the number only.")
     body = {"model": WATCHER_MODEL, "stream": False, "think": False,
             "messages": [{"role": "user", "content": prompt}],
-            "options": {"temperature": 0, "num_gpu": 0}}   # num_gpu 0 = CPU only
+            "options": {"temperature": 0}}
+    if WATCHER_MODEL != config.MODEL:
+        body["options"]["num_gpu"] = 0       # separate small model: CPU, so the GPU stays free
     req = urllib.request.Request(OLLAMA_URL, json.dumps(body).encode(),
                                  {"Content-Type": "application/json"})
     try:
@@ -137,11 +151,20 @@ def ask_llama(task, candidates):
         return candidates[0]                 # model confused/down: trust the dictionary
 
 
-def route(message, tools):
-    """Return a list of (task_text, tool) for every task that needs a tool."""
+def route(message, tools, topic=""):
+    """Return a list of (task_text, tool) for every task that needs a tool.
+
+    topic = the shelf of the last tool that ran ("music"). A short follow-up
+    like "next" or "louder" has no shelf word of its own, so it borrows that one.
+    """
+    if RULE.match(message):
+        return []                         # "next time I say X, do Y" is a rule, not an order
     plan, verb = [], ""
+    short = len(message.split()) <= 3
     for task in split_tasks(message):
         best, tied = _best(task, tools)
+        if best == 0 and topic and short:
+            best, tied = _best(f"{topic} {task}", tools)
         # "open vs code and file manager": the 2nd part lost its verb. If a part
         # matches nothing, borrow the first word of the part before it.
         if best == 0 and verb:

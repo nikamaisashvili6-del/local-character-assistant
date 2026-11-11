@@ -1,2 +1,2 @@
 Spotify music
-play, music, spotify, song, songs, track, playing, playlist, tune, tunes, listen, album, artist, band, samurai
+play, music, spotify, song, songs, track, playing, playlist, tune, tunes, listen, album, artist

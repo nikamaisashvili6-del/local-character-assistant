@@ -4,3 +4,4 @@ logs/
 journal/
 __pycache__/
 *.pyc
+evals/results/
